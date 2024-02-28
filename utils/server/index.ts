@@ -27,29 +27,32 @@ export const OpenAIStream = async (
   key: string,
   messages: Message[],
 ) => {
-  const res = await fetch(`${OPENAI_API_HOST}/v1/chat/completions`, {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${key ? key : process.env.OPENAI_API_KEY}`,
-      ...(process.env.OPENAI_ORGANIZATION && {
-        'OpenAI-Organization': process.env.OPENAI_ORGANIZATION,
+  const res = await fetch(
+    `${OPENAI_API_HOST}`,
+    {
+      headers: {
+        'Content-Type': 'application/json',
+        'Api-Key': `${key ? key : process.env.OPENAI_API_KEY}`,
+      },
+      method: 'POST',
+      body: JSON.stringify({
+        model: model.id,
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt,
+          },
+          ...messages,
+        ],
+        temperature: 0.7,
+        top_p: 0.95,
+        frequency_penalty: 0,
+        presence_penalty: 0,
+        max_tokens: 800,
+        stream: true,
       }),
     },
-    method: 'POST',
-    body: JSON.stringify({
-      model: model.id,
-      messages: [
-        {
-          role: 'system',
-          content: systemPrompt,
-        },
-        ...messages,
-      ],
-      max_tokens: 1000,
-      temperature: 1,
-      stream: true,
-    }),
-  });
+  );
 
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
@@ -89,7 +92,8 @@ export const OpenAIStream = async (
             const queue = encoder.encode(text);
             controller.enqueue(queue);
           } catch (e) {
-            controller.error(e);
+            // controller.error(e);
+            console.error(e)
           }
         }
       };

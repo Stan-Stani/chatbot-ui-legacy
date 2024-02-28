@@ -88,6 +88,7 @@ const Home: React.FC<HomeProps> = ({
   ) => {
     if (selectedConversation) {
       let updatedConversation: Conversation;
+      console.log({selectedConversation})
 
       if (deleteCount) {
         const updatedMessages = [...selectedConversation.messages];
@@ -289,7 +290,7 @@ const Home: React.FC<HomeProps> = ({
   // FETCH MODELS ----------------------------------------------
 
   const fetchModels = async (key: string) => {
-    return
+    // return
     const error = {
       title: t('Error fetching models.'),
       code: null,
@@ -867,6 +868,8 @@ export const getServerSideProps: GetServerSideProps = async ({ locale }) => {
       ) &&
       process.env.DEFAULT_MODEL) ||
     fallbackModelID;
+
+  // const defaultModelId = process.env.DEFAULT_MODEL;
 
   let serverSidePluginKeysSet = false;
 
