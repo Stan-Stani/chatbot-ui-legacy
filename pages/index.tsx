@@ -88,7 +88,6 @@ const Home: React.FC<HomeProps> = ({
   ) => {
     if (selectedConversation) {
       let updatedConversation: Conversation;
-      console.log({selectedConversation})
 
       if (deleteCount) {
         const updatedMessages = [...selectedConversation.messages];
