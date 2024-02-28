@@ -10,6 +10,7 @@ RUN npm ci
 # ---- Build ----
 FROM dependencies AS build
 COPY . .
+
 RUN NEXT_PUBLIC_DEFAULT_SYSTEM_PROMPT=PLACEHOLDER_NEXT_PUBLIC_DEFAULT_SYSTEM_PROMPT npm run build
 
 # ---- Production ----
@@ -25,6 +26,9 @@ COPY --from=build /app/dockerScripts/entrypoint.sh ./dockerScripts/entrypoint.sh
 
 # Expose the port the app will run on
 EXPOSE 3000
+
+# Ensure entrypoint is executable
+RUN chmod +x /dockerScripts/entrypoint.sh
 
 # Set Public Next JS envs. See https://stackoverflow.com/questions/71778031/nextjs-public-environment-variable-not-working-on-azure-app-service
 ENTRYPOINT ["./dockerScripts/entrypoint.sh"]
