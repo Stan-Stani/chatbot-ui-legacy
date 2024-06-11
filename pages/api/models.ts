@@ -1,5 +1,3 @@
-import { OpenAIModel, OpenAIModelID, OpenAIModels } from '@/types/openai';
-import { OPENAI_API_HOST } from '@/utils/app/const';
 
 export const config = {
   runtime: 'edge',
@@ -218,7 +216,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     return new Response(
       JSON.stringify([
-        { id: 'chatbot_35_turbo_16k', name: 'chatbot_35_turbo_16k' },
+        { id: 'chatbot_35_turbo_16k', name: 'Good: chatbot_35_turbo_16k' },
+        { id: 'chatbot-gpt4-turbo-128k', name: 'Better: chatbot-gpt4-turbo-128k' },
+        { id: 'chatbot-gpt4o', name: 'Best: chatbot-gpt4o' },
       ]),
       {
         status: 200,

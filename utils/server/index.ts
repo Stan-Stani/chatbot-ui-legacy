@@ -5,7 +5,14 @@ import {
   ParsedEvent,
   ReconnectInterval,
 } from 'eventsource-parser';
-import { OPENAI_API_HOST } from '../app/const';
+import {
+  OPENAI_API_ENDPOINT_ONE,
+  OPENAI_API_ENDPOINT_THREE,
+  OPENAI_API_ENDPOINT_TWO,
+  OPENAI_API_KEY_ONE,
+  OPENAI_API_KEY_THREE,
+  OPENAI_API_KEY_TWO,
+} from '../app/const';
 
 export class OpenAIError extends Error {
   type: string;
@@ -21,38 +28,56 @@ export class OpenAIError extends Error {
   }
 }
 
+
 export const OpenAIStream = async (
   model: OpenAIModel,
   systemPrompt: string,
   key: string,
   messages: Message[],
 ) => {
-  const res = await fetch(
-    `${OPENAI_API_HOST}`,
-    {
-      headers: {
-        'Content-Type': 'application/json',
-        'Api-Key': `${key ? key : process.env.OPENAI_API_KEY}`,
-      },
-      method: 'POST',
-      body: JSON.stringify({
-        model: model.id,
-        messages: [
-          {
-            role: 'system',
-            content: systemPrompt,
-          },
-          ...messages,
-        ],
-        temperature: 0.7,
-        top_p: 0.95,
-        frequency_penalty: 0,
-        presence_penalty: 0,
-        max_tokens: 800,
-        stream: true,
-      }),
+  let modelEndpoint = '';
+  let apiKey = '';
+  switch (model.id) {
+    default:
+    case 'chatbot_35_turbo_16k':
+      modelEndpoint = OPENAI_API_ENDPOINT_ONE;
+      apiKey = OPENAI_API_KEY_ONE;
+      break;
+
+    case 'chatbot-gpt4-turbo-128k':
+      modelEndpoint = OPENAI_API_ENDPOINT_TWO;
+      apiKey = OPENAI_API_KEY_TWO;
+      break;
+
+    case 'chatbot-gpt4o':
+      modelEndpoint = OPENAI_API_ENDPOINT_THREE;
+      apiKey = OPENAI_API_KEY_THREE;
+      break;
+  }
+
+  const res = await fetch(`${modelEndpoint}`, {
+    headers: {
+      'Content-Type': 'application/json',
+      'Api-Key': `${key ? key : apiKey}`,
     },
-  );
+    method: 'POST',
+    body: JSON.stringify({
+      model: model.id,
+      messages: [
+        {
+          role: 'system',
+          content: systemPrompt,
+        },
+        ...messages,
+      ],
+      temperature: 0.7,
+      top_p: 0.95,
+      frequency_penalty: 0,
+      presence_penalty: 0,
+      max_tokens: 800,
+      stream: true,
+    }),
+  });
 
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
@@ -90,13 +115,13 @@ export const OpenAIStream = async (
             const json = JSON.parse(data);
             const text = json.choices[0].delta.content;
             if (text === null && json.choices[0]['finish_reason'] === 'stop') {
-              return
+              return;
             }
             const queue = encoder.encode(text);
             controller.enqueue(queue);
           } catch (e) {
             // controller.error(e);
-            console.error(e)
+            console.error(e);
           }
         }
       };
