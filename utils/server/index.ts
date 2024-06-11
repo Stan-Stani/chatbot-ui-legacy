@@ -28,7 +28,6 @@ export class OpenAIError extends Error {
   }
 }
 
-
 export const OpenAIStream = async (
   model: OpenAIModel,
   systemPrompt: string,
@@ -74,7 +73,7 @@ export const OpenAIStream = async (
       top_p: 0.95,
       frequency_penalty: 0,
       presence_penalty: 0,
-      max_tokens: 800,
+      // max_tokens: 800,
       stream: true,
     }),
   });
@@ -113,8 +112,16 @@ export const OpenAIStream = async (
 
           try {
             const json = JSON.parse(data);
-            const text = json.choices[0].delta.content;
-            if (text === null && json.choices[0]['finish_reason'] === 'stop') {
+            const text = json.choices[0]?.delta.content;
+            if (
+              text === null &&
+              json.choices[0]?.['finish_reason'] === 'stop'
+            ) {
+              return;
+            }
+            if (!text) {
+              console.error();
+              console.trace();
               return;
             }
             const queue = encoder.encode(text);
@@ -122,6 +129,7 @@ export const OpenAIStream = async (
           } catch (e) {
             // controller.error(e);
             console.error(e);
+            console.trace(e);
           }
         }
       };
