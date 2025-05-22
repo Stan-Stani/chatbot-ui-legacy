@@ -99,16 +99,16 @@ function parseIdentityInfo(req: Request) {
     userId: string;
     identityProvider: string;
   } | null = {
-    userName: req.headers['x-ms-client-principal-name'],
-    userId: req.headers['x-ms-client-principal-id'],
-    identityProvider: req.headers['x-ms-client-principal-idp'],
+    userName: req.headers.get('x-ms-client-principal-name') ?? '',
+    userId: req.headers.get('x-ms-client-principal-id') ?? '',
+    identityProvider: req.headers.get('x-ms-client-principal-idp') ?? '',
   };
 
-  console.log({ userInfo: info, headers: req.headers });
+  console.log({ userInfo: info });
 
   let hasData = false;
   for (const key in info) {
-    if (info[key] !== undefined) {
+    if (info[key] !== '') {
       hasData = true;
     }
   }
