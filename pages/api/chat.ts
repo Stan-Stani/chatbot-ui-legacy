@@ -104,11 +104,15 @@ function parseIdentityInfo(req: Request) {
     identityProvider: req.headers['x-ms-client-principal-idp'],
   };
 
-  let keyCount = 0;
+  console.log({ userInfo: info, headers: req.headers });
+
+  let hasData = false;
   for (const key in info) {
-    ++keyCount;
+    if (info[key] !== undefined) {
+      hasData = true;
+    }
   }
-  if (keyCount <= 0) {
+  if (hasData === false) {
     info = null;
   }
   return info;

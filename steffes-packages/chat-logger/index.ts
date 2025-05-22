@@ -6,7 +6,6 @@ export class ChatLogger {
     const promiseAndResolvers = (Promise as any).withResolvers();
     this.containerResponsePromise = promiseAndResolvers.promise as any;
     (async () => {
-      console.log('before try');
       const endpoint = process.env['COSMOS_ENDPOINT'];
       const key = process.env['COSMOS_KEY'];
 
