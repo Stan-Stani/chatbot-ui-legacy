@@ -1,5 +1,5 @@
 # ---- Base Node ----
-FROM node:19-alpine AS base
+FROM node:23.11.1-alpine AS base
 WORKDIR /app
 COPY package*.json ./
 
@@ -14,7 +14,7 @@ COPY . .
 RUN NEXT_PUBLIC_DEFAULT_SYSTEM_PROMPT=PLACEHOLDER_NEXT_PUBLIC_DEFAULT_SYSTEM_PROMPT npm run build
 
 # ---- Production ----
-FROM node:19-alpine AS production
+FROM node:23.11.1-alpine AS production
 WORKDIR /app
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY --from=build /app/.next ./.next
