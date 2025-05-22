@@ -3,7 +3,7 @@ import { Container, ContainerResponse, CosmosClient } from '@azure/cosmos';
 export class ChatLogger {
   containerResponsePromise: Promise<ContainerResponse>;
   constructor() {
-    const promiseAndResolvers = Promise.withResolvers<ContainerResponse>();
+    const promiseAndResolvers = (Promise as any).withResolvers();
     this.containerResponsePromise = promiseAndResolvers.promise as any;
     (async () => {
       console.log('before try');
