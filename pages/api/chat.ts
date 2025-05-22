@@ -14,6 +14,7 @@ export const config = {
 const chatLogger = new ChatLogger();
 const handler = async (req: Request): Promise<Response> => {
   try {
+    const identityInfo = parseIdentityInfo(req);
     const { model, messages, key, prompt } = (await req.json()) as ChatBody;
 
     await init((imports) => WebAssembly.instantiate(wasm, imports));
@@ -55,37 +56,23 @@ const handler = async (req: Request): Promise<Response> => {
       messagesToSend,
     );
 
-    async function readStreamToString(stream) {
-      const reader = stream.getReader();
-      const chunks = [];
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        chunks.push(value);
-      }
-      reader.releaseLock();
-
-      // Concatenate all Uint8Arrays
-      const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
-      const allBytes = new Uint8Array(totalLength);
-      let pos = 0;
-      for (const chunk of chunks) {
-        allBytes.set(chunk, pos);
-        pos += chunk.length;
-      }
-
-      // Decode to string
-      const decoder = new TextDecoder();
-      return decoder.decode(allBytes);
-    }
     const [streamCopyA, streamCopyB] = stream.tee();
 
     (async () => {
       await dbContainer?.items.create({
         id: crypto.randomUUID(),
         questionAnswerTuple: [
-          { who: 'user', message: messages.at(-1).content },
-          { who: 'bot', message: await readStreamToString(streamCopyA) },
+          {
+            who: {
+              kind: 'user',
+              info: identityInfo ? { ...identityInfo } : identityInfo,
+            },
+            message: messages.at(-1).content,
+          },
+          {
+            who: { kind: 'llm', info: { ...model } },
+            message: await readStreamToString(streamCopyA),
+          },
         ],
       });
     })();
@@ -102,3 +89,51 @@ const handler = async (req: Request): Promise<Response> => {
 };
 
 export default handler;
+
+/** @section Helpers */
+
+/** Assumes we are using Microsoft Entra */
+function parseIdentityInfo(req: Request) {
+  let info: {
+    userName: string;
+    userId: string;
+    identityProvider: string;
+  } | null = {
+    userName: req.headers['x-ms-client-principal-name'],
+    userId: req.headers['x-ms-client-principal-id'],
+    identityProvider: req.headers['x-ms-client-principal-idp'],
+  };
+
+  let keyCount = 0;
+  for (const key in info) {
+    ++keyCount;
+  }
+  if (keyCount <= 0) {
+    info = null;
+  }
+  return info;
+}
+
+async function readStreamToString(stream) {
+  const reader = stream.getReader();
+  const chunks = [];
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+  }
+  reader.releaseLock();
+
+  // Concatenate all Uint8Arrays
+  const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+  const allBytes = new Uint8Array(totalLength);
+  let pos = 0;
+  for (const chunk of chunks) {
+    allBytes.set(chunk, pos);
+    pos += chunk.length;
+  }
+
+  // Decode to string
+  const decoder = new TextDecoder();
+  return decoder.decode(allBytes);
+}
