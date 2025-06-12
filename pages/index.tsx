@@ -918,7 +918,7 @@ const Home: React.FC<HomeProps> = ({
                   </p>
                   <br />
                   <p style={{ marginBottom: 2 }}>
-                    If you don't need to save it, you can dismiss this notice.
+                    If you don&apos;t need to save it, you can dismiss this notice.
                   </p>
                 </ul>
               </div>
@@ -972,7 +972,7 @@ const Home: React.FC<HomeProps> = ({
                   }}
                   title="You won't see this again on this device until there is new corrupted data."
                 >
-                  Don't show again
+                  Don&apos;t show again
                 </button>
               </div>
               <div style={{ fontSize: 12, color: '#777', textAlign: 'center' }}>
