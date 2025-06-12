@@ -5,7 +5,8 @@ COPY package*.json ./
 
 # ---- Dependencies ----
 FROM base AS dependencies
-RUN npm ci
+RUN npm config set registry https://registry.npmjs.org/
+RUN npm ci || (npm config set registry https://registry.yarnpkg.com/ && npm ci)
 
 # ---- Build ----
 FROM dependencies AS build
