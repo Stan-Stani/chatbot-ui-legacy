@@ -5,7 +5,8 @@ COPY package*.json ./
 
 # ---- Dependencies ----
 FROM base AS dependencies
-RUN npm ci --omit=dev
+RUN npm config set registry https://registry.npmmirror.com/
+RUN npm ci
  
 # ---- Build ----
 FROM dependencies AS build
