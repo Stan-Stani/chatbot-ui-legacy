@@ -10,11 +10,19 @@ export const cleanSelectedConversation = (conversation: Conversation) => {
 
   let updatedConversation = conversation;
 
-  // check for model on each conversation
-  if (!updatedConversation.model) {
+  // Model validation: ensure model exists in current models
+  const validModelIds = Object.values(OpenAIModels).map((m) => m.id);
+  const fallbackModel = OpenAIModels[OpenAIModelID.GPT_4_1];
+
+  if (
+    !updatedConversation.model ||
+    // The model may be a partially serialized object (old export), check its id
+    !updatedConversation.model.id ||
+    !validModelIds.includes(updatedConversation.model.id)
+  ) {
     updatedConversation = {
       ...updatedConversation,
-      model: updatedConversation.model || OpenAIModels[(OpenAIModelID.GPT_4_1)],
+      model: fallbackModel,
     };
   }
 
@@ -47,10 +55,17 @@ export const cleanConversationHistory = (history: any[]): Conversation[] => {
     return [];
   }
 
+  const validModelIds = Object.values(OpenAIModels).map((m) => m.id);
+  const fallbackModel = OpenAIModels[OpenAIModelID.GPT_4_1];
+
   return history.reduce((acc: any[], conversation) => {
     try {
-      if (!conversation.model) {
-        conversation.model = OpenAIModels[OpenAIModelID.GPT_4_1];
+      if (
+        !conversation.model ||
+        !conversation.model.id ||
+        !validModelIds.includes(conversation.model.id)
+      ) {
+        conversation.model = fallbackModel;
       }
 
       if (!conversation.prompt) {

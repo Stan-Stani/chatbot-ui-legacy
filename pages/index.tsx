@@ -1,3 +1,4 @@
+import React from 'react';
 import { Chat } from '@/components/Chat/Chat';
 import { Chatbar } from '@/components/Chatbar/Chatbar';
 import { Navbar } from '@/components/Mobile/Navbar';
@@ -20,14 +21,18 @@ import {
   cleanConversationHistory,
   cleanSelectedConversation,
 } from '@/utils/app/clean';
-import { DEFAULT_SYSTEM_PROMPT } from '@/utils/app/const';
+import { DEFAULT_SYSTEM_PROMPT, APP_VERSION } from '@/utils/app/const';
 import {
   saveConversation,
   saveConversations,
   updateConversation,
 } from '@/utils/app/conversation';
 import { saveFolders } from '@/utils/app/folders';
-import { exportData, importData } from '@/utils/app/importExport';
+import {
+  exportData,
+  exportDataWithCorrupted,
+  importData,
+} from '@/utils/app/importExport';
 import { savePrompts } from '@/utils/app/prompts';
 import { IconArrowBarLeft, IconArrowBarRight } from '@tabler/icons-react';
 import { GetServerSideProps } from 'next';
@@ -78,6 +83,84 @@ const Home: React.FC<HomeProps> = ({
   // REFS ----------------------------------------------
 
   const stopConversationRef = useRef<boolean>(false);
+
+  // CORRUPTED BACKUP VIEW --------------------------------------
+  const [corruptedConv, setCorruptedConv] = useState<string | null>(null);
+  const [corruptedSelConv, setCorruptedSelConv] = useState<string | null>(null);
+
+  useEffect(() => {
+    // On mount, check if corrupted is stored in localStorage
+    const corrConv = localStorage.getItem('corrupted_conversationHistory');
+    const corrSelConv = localStorage.getItem('corrupted_selectedConversation');
+    setCorruptedConv(corrConv);
+    setCorruptedSelConv(corrSelConv);
+  }, []);
+
+  // VERSION/CACHE BUSTING & MIGRATION --------------------------------------
+  useEffect(() => {
+    const storedVersion = localStorage.getItem('APP_VERSION');
+    if (storedVersion !== APP_VERSION) {
+      localStorage.removeItem('corrupted_chat_ack');
+      try {
+        // Try to migrate all stored conversations/models cleanly
+        const rawConv = localStorage.getItem('conversationHistory');
+        const rawSelConv = localStorage.getItem('selectedConversation');
+        let migrated = false;
+
+        if (rawConv) {
+          try {
+            const parsed = JSON.parse(rawConv);
+            // Clean any models/system prompts/etc.
+            const cleaned = cleanConversationHistory(parsed);
+            localStorage.setItem(
+              'conversationHistory',
+              JSON.stringify(cleaned),
+            );
+            migrated = true;
+          } catch {
+            // Fallback: save corrupted data under a backup key before removal
+            localStorage.setItem('corrupted_conversationHistory', rawConv);
+            localStorage.removeItem('conversationHistory');
+          }
+        }
+        if (rawSelConv) {
+          try {
+            const parsed = JSON.parse(rawSelConv);
+            // Clean up selected conversation
+            const cleaned = cleanSelectedConversation(parsed);
+            localStorage.setItem(
+              'selectedConversation',
+              JSON.stringify(cleaned),
+            );
+            migrated = true;
+          } catch {
+            // Fallback: save corrupted data under a backup key before removal
+            localStorage.setItem('corrupted_selectedConversation', rawSelConv);
+            localStorage.removeItem('selectedConversation');
+          }
+        }
+
+        localStorage.setItem('APP_VERSION', APP_VERSION);
+        if (migrated) {
+          // Optionally, show a toast or log indicating migration was run
+          // toast.success('Chatbot upgraded and old chats migrated!');
+        }
+      } catch (e) {
+        // As last resort, backup corrupt state before clearing
+        const rawConv = localStorage.getItem('conversationHistory');
+        const rawSelConv = localStorage.getItem('selectedConversation');
+        if (rawConv) {
+          localStorage.setItem('corrupted_conversationHistory', rawConv);
+          localStorage.removeItem('conversationHistory');
+        }
+        if (rawSelConv) {
+          localStorage.setItem('corrupted_selectedConversation', rawSelConv);
+          localStorage.removeItem('selectedConversation');
+        }
+        localStorage.setItem('APP_VERSION', APP_VERSION);
+      }
+    }
+  }, []);
 
   // FETCH RESPONSE ----------------------------------------------
 
@@ -396,7 +479,16 @@ const Home: React.FC<HomeProps> = ({
   };
 
   const handleExportData = () => {
-    exportData();
+    // If corrupted backup fields exist, export with them attached:
+    const corruptedConv = localStorage.getItem('corrupted_conversationHistory');
+    const corruptedSelConv = localStorage.getItem(
+      'corrupted_selectedConversation',
+    );
+    if (corruptedConv || corruptedSelConv) {
+      exportDataWithCorrupted();
+    } else {
+      exportData();
+    }
   };
 
   const handleImportConversations = (data: SupportedExportFormats) => {
@@ -481,16 +573,30 @@ const Home: React.FC<HomeProps> = ({
   const handleNewConversation = () => {
     const lastConversation = conversations[conversations.length - 1];
 
-    const newConversation: Conversation = {
-      id: uuidv4(),
-      name: `${t('New Conversation')}`,
-      messages: [],
-      model: lastConversation?.model || {
+    // Only use the last convo's model if it currently exists in OpenAIModels
+    let newModel;
+    const validModelIds = Object.values(OpenAIModels).map((m) => m.id);
+    if (
+      lastConversation &&
+      lastConversation.model &&
+      lastConversation.model.id &&
+      validModelIds.includes(lastConversation.model.id)
+    ) {
+      newModel = lastConversation.model;
+    } else {
+      newModel = {
         id: OpenAIModels[defaultModelId].id,
         name: OpenAIModels[defaultModelId].name,
         maxLength: OpenAIModels[defaultModelId].maxLength,
         tokenLimit: OpenAIModels[defaultModelId].tokenLimit,
-      },
+      };
+    }
+
+    const newConversation: Conversation = {
+      id: uuidv4(),
+      name: `${t('New Conversation')}`,
+      messages: [],
+      model: newModel,
       prompt: DEFAULT_SYSTEM_PROMPT,
       folderId: null,
     };
@@ -735,6 +841,149 @@ const Home: React.FC<HomeProps> = ({
 
   return (
     <>
+      {(corruptedConv || corruptedSelConv) &&
+        !localStorage.getItem('corrupted_chat_ack') && (
+          <div
+            style={{
+              position: 'fixed',
+              left: 0,
+              top: 0,
+              width: '100vw',
+              height: '100vh',
+              zIndex: 2147483001,
+              background: 'rgba(0,0,0,0.33)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <div
+              style={{
+                background: '#fff',
+                border: '2px solid #E57373',
+                borderRadius: 10,
+                boxShadow: '0 6px 32px 0 rgba(0,0,0,.18)',
+                maxWidth: 400,
+                width: '90%',
+                padding: '24px 20px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+              }}
+            >
+              <div
+                style={{
+                  color: '#c00',
+                  fontWeight: 600,
+                  fontSize: 18,
+                  marginBottom: 12,
+                  textAlign: 'center',
+                }}
+              >
+                Some old chat data was detected but could not be automatically
+                converted.
+              </div>
+              <div
+                style={{
+                  color: '#444',
+                  textAlign: 'center',
+                  fontSize: 14,
+                  marginBottom: 12,
+                }}
+              >
+                <b>What can you do?</b>
+                <br />
+                <ul
+                  style={{
+                    textAlign: 'left',
+                    paddingLeft: 20,
+                    marginTop: 4,
+                    marginBottom: 8,
+                  }}
+                >
+                  <p style={{ marginBottom: 2 }}>
+                    Your raw backup is still saved in browser storage as{' '}
+                    <code>corrupted_conversationHistory</code>
+                    {corruptedSelConv ? ' and ' : ''}
+                    <code>
+                      {corruptedSelConv ? 'corrupted_selectedConversation' : ''}
+                    </code>
+                    .
+                  </p>
+                  <br />
+                  <p style={{ marginBottom: 2 }}>
+                    You can save this backup long-term by using{' '}
+                    <b>Export data</b> in the sidebar menu. Your next export
+                    will contain the corrupted data as well.
+                  </p>
+                  <br />
+                  <p style={{ marginBottom: 2 }}>
+                    If you don't need to save it, you can dismiss this notice.
+                  </p>
+                </ul>
+              </div>
+              <div
+                style={{
+                  fontSize: 13,
+                  color: '#666',
+                  marginBottom: 18,
+                  textAlign: 'center',
+                }}
+              ></div>
+              <div style={{ display: 'flex', gap: 11, marginBottom: 8 }}>
+                <button
+                  style={{
+                    background: '#E57373',
+                    color: '#fff',
+                    border: 'none',
+                    fontWeight: 600,
+                    borderRadius: 5,
+                    padding: '7px 16px',
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => {
+                    let text = '';
+                    if (corruptedConv) {
+                      text += `corrupted_conversationHistory:\n${corruptedConv}\n\n`;
+                    }
+                    if (corruptedSelConv) {
+                      text += `corrupted_selectedConversation:\n${corruptedSelConv}`;
+                    }
+                    navigator.clipboard.writeText(text.trim());
+                    toast.success('Backup copied to clipboard!');
+                  }}
+                >
+                  Copy backup to clipboard
+                </button>
+                <button
+                  style={{
+                    background: '#bbb',
+                    color: '#fff',
+                    border: 'none',
+                    fontWeight: 500,
+                    borderRadius: 5,
+                    padding: '7px 16px',
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => {
+                    localStorage.setItem('corrupted_chat_ack', '1');
+                    setCorruptedConv(null);
+                    setCorruptedSelConv(null);
+                  }}
+                  title="You won't see this again on this device until there is new corrupted data."
+                >
+                  Don't show again
+                </button>
+              </div>
+              <div style={{ fontSize: 12, color: '#777', textAlign: 'center' }}>
+                You can always export history from the sidebar.
+                <br />
+                This dialog will only reappear if new corrupted data is
+                detected.
+              </div>
+            </div>
+          </div>
+        )}
       <Head>
         <title>Chatbot UI</title>
         <meta name="description" content="ChatGPT but better." />
@@ -783,19 +1032,19 @@ const Home: React.FC<HomeProps> = ({
                 />
 
                 <button
-                  className="fixed top-5 left-[270px] z-50 h-7 w-7 hover:text-gray-400 dark:text-white dark:hover:text-gray-300 sm:top-0.5 sm:left-[270px] sm:h-8 sm:w-8 sm:text-neutral-700"
+                  className="fixed left-[270px] top-5 z-50 h-7 w-7 hover:text-gray-400 dark:text-white dark:hover:text-gray-300 sm:left-[270px] sm:top-0.5 sm:h-8 sm:w-8 sm:text-neutral-700"
                   onClick={handleToggleChatbar}
                 >
                   <IconArrowBarLeft />
                 </button>
                 <div
                   onClick={handleToggleChatbar}
-                  className="absolute top-0 left-0 z-10 h-full w-full bg-black opacity-70 sm:hidden"
+                  className="absolute left-0 top-0 z-10 h-full w-full bg-black opacity-70 sm:hidden"
                 ></div>
               </div>
             ) : (
               <button
-                className="fixed top-2.5 left-4 z-50 h-7 w-7 text-white hover:text-gray-400 dark:text-white dark:hover:text-gray-300 sm:top-0.5 sm:left-4 sm:h-8 sm:w-8 sm:text-neutral-700"
+                className="fixed left-4 top-2.5 z-50 h-7 w-7 text-white hover:text-gray-400 dark:text-white dark:hover:text-gray-300 sm:left-4 sm:top-0.5 sm:h-8 sm:w-8 sm:text-neutral-700"
                 onClick={handleToggleChatbar}
               >
                 <IconArrowBarRight />
@@ -833,19 +1082,19 @@ const Home: React.FC<HomeProps> = ({
                   onUpdateFolder={handleUpdateFolder}
                 />
                 <button
-                  className="fixed top-5 right-[270px] z-50 h-7 w-7 hover:text-gray-400 dark:text-white dark:hover:text-gray-300 sm:top-0.5 sm:right-[270px] sm:h-8 sm:w-8 sm:text-neutral-700"
+                  className="fixed right-[270px] top-5 z-50 h-7 w-7 hover:text-gray-400 dark:text-white dark:hover:text-gray-300 sm:right-[270px] sm:top-0.5 sm:h-8 sm:w-8 sm:text-neutral-700"
                   onClick={handleTogglePromptbar}
                 >
                   <IconArrowBarRight />
                 </button>
                 <div
                   onClick={handleTogglePromptbar}
-                  className="absolute top-0 left-0 z-10 h-full w-full bg-black opacity-70 sm:hidden"
+                  className="absolute left-0 top-0 z-10 h-full w-full bg-black opacity-70 sm:hidden"
                 ></div>
               </div>
             ) : (
               <button
-                className="fixed top-2.5 right-4 z-50 h-7 w-7 text-white hover:text-gray-400 dark:text-white dark:hover:text-gray-300 sm:top-0.5 sm:right-4 sm:h-8 sm:w-8 sm:text-neutral-700"
+                className="fixed right-4 top-2.5 z-50 h-7 w-7 text-white hover:text-gray-400 dark:text-white dark:hover:text-gray-300 sm:right-4 sm:top-0.5 sm:h-8 sm:w-8 sm:text-neutral-700"
                 onClick={handleTogglePromptbar}
               >
                 <IconArrowBarLeft />
@@ -857,6 +1106,7 @@ const Home: React.FC<HomeProps> = ({
     </>
   );
 };
+
 export default Home;
 
 export const getServerSideProps: GetServerSideProps = async ({ locale }) => {
