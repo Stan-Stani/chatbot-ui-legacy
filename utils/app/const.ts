@@ -1,5 +1,5 @@
 // Update this version whenever you want to force localStorage resets for app-breaking/model changes
-export const APP_VERSION = '2025-09-22-v1';
+export const APP_VERSION = '2025-09-22-v2';
 export const DEFAULT_SYSTEM_PROMPT =
   process.env.NEXT_PUBLIC_DEFAULT_SYSTEM_PROMPT ||
   "You are ChatGPT, a large language model trained by OpenAI. Follow the user's instructions carefully. Respond using markdown.";

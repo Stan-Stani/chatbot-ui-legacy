@@ -7,6 +7,7 @@ import { Prompt } from '@/types/prompt';
 import { throttle } from '@/utils';
 import { IconArrowDown, IconClearAll, IconSettings } from '@tabler/icons-react';
 import { useTranslation } from 'next-i18next';
+import Image from 'next/image';
 import {
   FC,
   MutableRefObject,
@@ -214,6 +215,8 @@ export const Chat: FC<Props> = memo(
                       ) : (
                         <>
                           <img
+                            width={200}
+                            height={73}
                             className="m-auto"
                             src="https://cdn.steffesgroup.com/settings/eeda55ac-69bd-418d-9ee8-7f33b12d6be4/logos/logo.png"
                           />
