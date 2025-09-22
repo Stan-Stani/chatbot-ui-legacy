@@ -1,6 +1,11 @@
 import { SupportedExportFormats } from '@/types/export';
 import { PluginKey } from '@/types/plugin';
-import { IconFileExport, IconMoon, IconSun } from '@tabler/icons-react';
+import {
+  IconFileExport,
+  IconMoon,
+  IconSun,
+  IconSettings,
+} from '@tabler/icons-react';
 import { useTranslation } from 'next-i18next';
 import { FC } from 'react';
 import { Import } from '../Settings/Import';
@@ -44,14 +49,6 @@ export const ChatbarSettings: FC<Props> = ({
         <ClearConversations onClearConversations={onClearConversations} />
       ) : null}
 
-      <Import onImport={onImportConversations} />
-
-      <SidebarButton
-        text={t('Export data')}
-        icon={<IconFileExport size={18} />}
-        onClick={() => onExportConversations()}
-      />
-
       <SidebarButton
         text={lightMode === 'light' ? t('Dark mode') : t('Light mode')}
         icon={
@@ -61,14 +58,29 @@ export const ChatbarSettings: FC<Props> = ({
           onToggleLightMode(lightMode === 'light' ? 'dark' : 'light')
         }
       />
+      <details className="w-full" style={{ listStyle: 'none' }}>
+        <summary className="flex w-full cursor-pointer select-none items-center gap-3 rounded-md px-3 py-3 text-[14px] leading-3 text-white transition-colors duration-200 hover:bg-gray-500/10">
+          <IconSettings size={18} /> Advanced
+        </summary>
+        <div className="ml-8">
+          <Import onImport={onImportConversations} />
 
-      <Key apiKey={apiKey} onApiKeyChange={onApiKeyChange} />
+          <SidebarButton
+            text={t('Export data')}
+            icon={<IconFileExport size={18} />}
+            onClick={() => onExportConversations()}
+          />
+        </div>
+      </details>
+
+      {/* Don't want to confuse non-tech-savvy users so hiding. */}
+      {/* <Key apiKey={apiKey} onApiKeyChange={onApiKeyChange} />
 
       <PluginKeys
         pluginKeys={pluginKeys}
         onPluginKeyChange={onPluginKeyChange}
         onClearPluginKey={onClearPluginKey}
-      />
+      /> */}
     </div>
   );
 };
