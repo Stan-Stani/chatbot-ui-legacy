@@ -78,7 +78,7 @@ export const ChatInput: FC<Props> = ({
     }
 
     setContent(value);
-    updatePromptListVisibility(value);
+    // updatePromptListVisibility(value);
   };
 
   const handleSend = () => {
@@ -125,7 +125,7 @@ export const ChatInput: FC<Props> = ({
         );
         return newContent;
       });
-      handlePromptSelect(selectedPrompt);
+      // handlePromptSelect(selectedPrompt);
     }
     setShowPromptList(false);
   };
@@ -177,32 +177,32 @@ export const ChatInput: FC<Props> = ({
     return foundVariables;
   };
 
-  const updatePromptListVisibility = useCallback((text: string) => {
-    const match = text.match(/\/\w*$/);
+  // const updatePromptListVisibility = useCallback((text: string) => {
+  //   const match = text.match(/\/\w*$/);
 
-    if (match) {
-      setShowPromptList(true);
-      setPromptInputValue(match[0].slice(1));
-    } else {
-      setShowPromptList(false);
-      setPromptInputValue('');
-    }
-  }, []);
+  //   if (match) {
+  //     setShowPromptList(true);
+  //     setPromptInputValue(match[0].slice(1));
+  //   } else {
+  //     setShowPromptList(false);
+  //     setPromptInputValue('');
+  //   }
+  // }, []);
 
-  const handlePromptSelect = (prompt: Prompt) => {
-    const parsedVariables = parseVariables(prompt.content);
-    setVariables(parsedVariables);
+  // const handlePromptSelect = (prompt: Prompt) => {
+  //   const parsedVariables = parseVariables(prompt.content);
+  //   setVariables(parsedVariables);
 
-    if (parsedVariables.length > 0) {
-      setIsModalVisible(true);
-    } else {
-      setContent((prevContent) => {
-        const updatedContent = prevContent?.replace(/\/\w*$/, prompt.content);
-        return updatedContent;
-      });
-      updatePromptListVisibility(prompt.content);
-    }
-  };
+  //   if (parsedVariables.length > 0) {
+  //     setIsModalVisible(true);
+  //   } else {
+  //     setContent((prevContent) => {
+  //       const updatedContent = prevContent?.replace(/\/\w*$/, prompt.content);
+  //       return updatedContent;
+  //     });
+  //     updatePromptListVisibility(prompt.content);
+  //   }
+  // };
 
   const handleSubmit = (updatedVariables: string[]) => {
     const newContent = content?.replace(/{{(.*?)}}/g, (match, variable) => {
@@ -309,9 +309,7 @@ export const ChatInput: FC<Props> = ({
                   : 'hidden'
               }`,
             }}
-            placeholder={
-              t('Type a message or type "/" to select a prompt...') || ''
-            }
+            placeholder={t('Ask anything') || ''}
             value={content}
             rows={1}
             onCompositionStart={() => setIsTyping(true)}
