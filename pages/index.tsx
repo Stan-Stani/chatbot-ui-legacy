@@ -78,7 +78,7 @@ const Home: React.FC<HomeProps> = ({
   const [showSidebar, setShowSidebar] = useState<boolean>(true);
 
   const [prompts, setPrompts] = useState<Prompt[]>([]);
-  const [showPromptbar, setShowPromptbar] = useState<boolean>(true);
+  // const [showPromptbar, setShowPromptbar] = useState<boolean>(true);
 
   // REFS ----------------------------------------------
 
@@ -473,10 +473,10 @@ const Home: React.FC<HomeProps> = ({
     localStorage.setItem('showChatbar', JSON.stringify(!showSidebar));
   };
 
-  const handleTogglePromptbar = () => {
-    setShowPromptbar(!showPromptbar);
-    localStorage.setItem('showPromptbar', JSON.stringify(!showPromptbar));
-  };
+  // const handleTogglePromptbar = () => {
+  //   setShowPromptbar(!showPromptbar);
+  //   localStorage.setItem('showPromptbar', JSON.stringify(!showPromptbar));
+  // };
 
   const handleExportData = () => {
     // If corrupted backup fields exist, export with them attached:
@@ -794,10 +794,10 @@ const Home: React.FC<HomeProps> = ({
       setShowSidebar(showChatbar === 'true');
     }
 
-    const showPromptbar = localStorage.getItem('showPromptbar');
-    if (showPromptbar) {
-      setShowPromptbar(showPromptbar === 'true');
-    }
+    // const showPromptbar = localStorage.getItem('showPromptbar');
+    // if (showPromptbar) {
+    //   setShowPromptbar(showPromptbar === 'true');
+    // }
 
     const folders = localStorage.getItem('folders');
     if (folders) {
@@ -1068,8 +1068,7 @@ const Home: React.FC<HomeProps> = ({
                 stopConversationRef={stopConversationRef}
               />
             </div>
-
-            {showPromptbar ? (
+            {/* {showPromptbar ? (
               <div>
                 <Promptbar
                   prompts={prompts}
@@ -1099,7 +1098,7 @@ const Home: React.FC<HomeProps> = ({
               >
                 <IconArrowBarLeft />
               </button>
-            )}
+            )} */}
           </div>
         </main>
       )}
