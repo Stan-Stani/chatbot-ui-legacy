@@ -212,7 +212,14 @@ export const Chat: FC<Props> = memo(
                           <Spinner size="16px" className="mx-auto" />
                         </div>
                       ) : (
-                        'Chatbot UI'
+                        <>
+                          <img
+                            className="m-auto"
+                            src="https://cdn.steffesgroup.com/settings/eeda55ac-69bd-418d-9ee8-7f33b12d6be4/logos/logo.png"
+                          />
+                          <br />
+                          SteffesGPT
+                        </>
                       )}
                     </div>
 
