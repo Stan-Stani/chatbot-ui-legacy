@@ -84,84 +84,6 @@ const Home: React.FC<HomeProps> = ({
 
   const stopConversationRef = useRef<boolean>(false);
 
-  // CORRUPTED BACKUP VIEW --------------------------------------
-  const [corruptedConv, setCorruptedConv] = useState<string | null>(null);
-  const [corruptedSelConv, setCorruptedSelConv] = useState<string | null>(null);
-
-  useEffect(() => {
-    // On mount, check if corrupted is stored in localStorage
-    const corrConv = localStorage.getItem('corrupted_conversationHistory');
-    const corrSelConv = localStorage.getItem('corrupted_selectedConversation');
-    setCorruptedConv(corrConv);
-    setCorruptedSelConv(corrSelConv);
-  }, []);
-
-  // VERSION/CACHE BUSTING & MIGRATION --------------------------------------
-  useEffect(() => {
-    const storedVersion = localStorage.getItem('APP_VERSION');
-    if (storedVersion !== APP_VERSION) {
-      localStorage.removeItem('corrupted_chat_ack');
-      try {
-        // Try to migrate all stored conversations/models cleanly
-        const rawConv = localStorage.getItem('conversationHistory');
-        const rawSelConv = localStorage.getItem('selectedConversation');
-        let migrated = false;
-
-        if (rawConv) {
-          try {
-            const parsed = JSON.parse(rawConv);
-            // Clean any models/system prompts/etc.
-            const cleaned = cleanConversationHistory(parsed);
-            localStorage.setItem(
-              'conversationHistory',
-              JSON.stringify(cleaned),
-            );
-            migrated = true;
-          } catch {
-            // Fallback: save corrupted data under a backup key before removal
-            localStorage.setItem('corrupted_conversationHistory', rawConv);
-            localStorage.removeItem('conversationHistory');
-          }
-        }
-        if (rawSelConv) {
-          try {
-            const parsed = JSON.parse(rawSelConv);
-            // Clean up selected conversation
-            const cleaned = cleanSelectedConversation(parsed);
-            localStorage.setItem(
-              'selectedConversation',
-              JSON.stringify(cleaned),
-            );
-            migrated = true;
-          } catch {
-            // Fallback: save corrupted data under a backup key before removal
-            localStorage.setItem('corrupted_selectedConversation', rawSelConv);
-            localStorage.removeItem('selectedConversation');
-          }
-        }
-
-        localStorage.setItem('APP_VERSION', APP_VERSION);
-        if (migrated) {
-          // Optionally, show a toast or log indicating migration was run
-          // toast.success('Chatbot upgraded and old chats migrated!');
-        }
-      } catch (e) {
-        // As last resort, backup corrupt state before clearing
-        const rawConv = localStorage.getItem('conversationHistory');
-        const rawSelConv = localStorage.getItem('selectedConversation');
-        if (rawConv) {
-          localStorage.setItem('corrupted_conversationHistory', rawConv);
-          localStorage.removeItem('conversationHistory');
-        }
-        if (rawSelConv) {
-          localStorage.setItem('corrupted_selectedConversation', rawSelConv);
-          localStorage.removeItem('selectedConversation');
-        }
-        localStorage.setItem('APP_VERSION', APP_VERSION);
-      }
-    }
-  }, []);
-
   // FETCH RESPONSE ----------------------------------------------
 
   const handleSend = async (
@@ -811,22 +733,38 @@ const Home: React.FC<HomeProps> = ({
 
     const conversationHistory = localStorage.getItem('conversationHistory');
     if (conversationHistory) {
-      const parsedConversationHistory: Conversation[] =
-        JSON.parse(conversationHistory);
-      const cleanedConversationHistory = cleanConversationHistory(
-        parsedConversationHistory,
-      );
-      setConversations(cleanedConversationHistory);
+      try {
+        const parsedConversationHistory: Conversation[] =
+          JSON.parse(conversationHistory);
+        const cleanedConversationHistory = cleanConversationHistory(
+          parsedConversationHistory,
+        );
+        setConversations(cleanedConversationHistory);
+      } catch (error) {
+        console.error(error);
+      }
     }
 
     const selectedConversation = localStorage.getItem('selectedConversation');
     if (selectedConversation) {
-      const parsedSelectedConversation: Conversation =
-        JSON.parse(selectedConversation);
-      const cleanedSelectedConversation = cleanSelectedConversation(
-        parsedSelectedConversation,
-      );
-      setSelectedConversation(cleanedSelectedConversation);
+      try {
+        const parsedSelectedConversation: Conversation =
+          JSON.parse(selectedConversation);
+        const cleanedSelectedConversation = cleanSelectedConversation(
+          parsedSelectedConversation,
+        );
+        setSelectedConversation(cleanedSelectedConversation);
+      } catch (error) {
+        console.error(error);
+        setSelectedConversation({
+          id: uuidv4(),
+          name: 'New conversation',
+          messages: [],
+          model: OpenAIModels[defaultModelId],
+          prompt: DEFAULT_SYSTEM_PROMPT,
+          folderId: null,
+        });
+      }
     } else {
       setSelectedConversation({
         id: uuidv4(),
@@ -841,149 +779,6 @@ const Home: React.FC<HomeProps> = ({
 
   return (
     <>
-      {(corruptedConv || corruptedSelConv) &&
-        !localStorage.getItem('corrupted_chat_ack') && (
-          <div
-            style={{
-              position: 'fixed',
-              left: 0,
-              top: 0,
-              width: '100vw',
-              height: '100vh',
-              zIndex: 2147483001,
-              background: 'rgba(0,0,0,0.33)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <div
-              style={{
-                background: '#fff',
-                border: '2px solid #E57373',
-                borderRadius: 10,
-                boxShadow: '0 6px 32px 0 rgba(0,0,0,.18)',
-                maxWidth: 400,
-                width: '90%',
-                padding: '24px 20px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-              }}
-            >
-              <div
-                style={{
-                  color: '#c00',
-                  fontWeight: 600,
-                  fontSize: 18,
-                  marginBottom: 12,
-                  textAlign: 'center',
-                }}
-              >
-                Some old chat data was detected but could not be automatically
-                converted.
-              </div>
-              <div
-                style={{
-                  color: '#444',
-                  textAlign: 'center',
-                  fontSize: 14,
-                  marginBottom: 12,
-                }}
-              >
-                <b>What can you do?</b>
-                <br />
-                <ul
-                  style={{
-                    textAlign: 'left',
-                    paddingLeft: 20,
-                    marginTop: 4,
-                    marginBottom: 8,
-                  }}
-                >
-                  <p style={{ marginBottom: 2 }}>
-                    Your raw backup is still saved in browser storage as{' '}
-                    <code>corrupted_conversationHistory</code>
-                    {corruptedSelConv ? ' and ' : ''}
-                    <code>
-                      {corruptedSelConv ? 'corrupted_selectedConversation' : ''}
-                    </code>
-                    .
-                  </p>
-                  <br />
-                  <p style={{ marginBottom: 2 }}>
-                    You can save this backup long-term by using{' '}
-                    <b>Export data</b> in the sidebar menu. Your next export
-                    will contain the corrupted data as well.
-                  </p>
-                  <br />
-                  <p style={{ marginBottom: 2 }}>
-                    If you don&apos;t need to save it, you can dismiss this notice.
-                  </p>
-                </ul>
-              </div>
-              <div
-                style={{
-                  fontSize: 13,
-                  color: '#666',
-                  marginBottom: 18,
-                  textAlign: 'center',
-                }}
-              ></div>
-              <div style={{ display: 'flex', gap: 11, marginBottom: 8 }}>
-                <button
-                  style={{
-                    background: '#E57373',
-                    color: '#fff',
-                    border: 'none',
-                    fontWeight: 600,
-                    borderRadius: 5,
-                    padding: '7px 16px',
-                    cursor: 'pointer',
-                  }}
-                  onClick={() => {
-                    let text = '';
-                    if (corruptedConv) {
-                      text += `corrupted_conversationHistory:\n${corruptedConv}\n\n`;
-                    }
-                    if (corruptedSelConv) {
-                      text += `corrupted_selectedConversation:\n${corruptedSelConv}`;
-                    }
-                    navigator.clipboard.writeText(text.trim());
-                    toast.success('Backup copied to clipboard!');
-                  }}
-                >
-                  Copy backup to clipboard
-                </button>
-                <button
-                  style={{
-                    background: '#bbb',
-                    color: '#fff',
-                    border: 'none',
-                    fontWeight: 500,
-                    borderRadius: 5,
-                    padding: '7px 16px',
-                    cursor: 'pointer',
-                  }}
-                  onClick={() => {
-                    localStorage.setItem('corrupted_chat_ack', '1');
-                    setCorruptedConv(null);
-                    setCorruptedSelConv(null);
-                  }}
-                  title="You won't see this again on this device until there is new corrupted data."
-                >
-                  Don&apos;t show again
-                </button>
-              </div>
-              <div style={{ fontSize: 12, color: '#777', textAlign: 'center' }}>
-                You can always export history from the sidebar.
-                <br />
-                This dialog will only reappear if new corrupted data is
-                detected.
-              </div>
-            </div>
-          </div>
-        )}
       <Head>
         <title>Chatbot UI</title>
         <meta name="description" content="ChatGPT but better." />
