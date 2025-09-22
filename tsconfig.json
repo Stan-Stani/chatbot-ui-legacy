@@ -16,7 +16,16 @@
     "incremental": true,
     "types": ["vitest/globals"],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      // Force everything to use the same react types definitions
+      // Fixes issues where TS complains about children prop missing
+      // and mentions react-portal for some reason.
+      // Think it's related to this:
+      // https://github.com/DefinitelyTyped/DefinitelyTyped/issues/66841
+      // https://github.com/facebook/react/issues/24304#issuecomment-1094565891
+      // Basically some sublibraries are using incompatible version
+      // of React types with main version of this repo
+      "react": ["./node_modules/@types/react"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
