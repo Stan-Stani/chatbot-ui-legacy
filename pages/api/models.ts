@@ -1,3 +1,4 @@
+import { OpenAIModelID } from '../../types/openai';
 
 export const config = {
   runtime: 'edge',
@@ -5,13 +6,10 @@ export const config = {
 
 const handler = async (req: Request): Promise<Response> => {
   try {
-   
-   
-
     return new Response(
       JSON.stringify([
-
-        { id: 'chatbot-gpt4.1', name: 'chatbot-gpt4.1' },
+        { id: OpenAIModelID.GPT_4_1, name: OpenAIModelID.GPT_4_1 },
+        { id: OpenAIModelID.GPT_5, name: OpenAIModelID.GPT_5 },
       ]),
       {
         status: 200,

@@ -5,12 +5,11 @@ import {
   ParsedEvent,
   ReconnectInterval,
 } from 'eventsource-parser';
+import { OpenAIModelID } from '../../types/openai';
 import {
   OPENAI_API_ENDPOINT_ONE,
-  OPENAI_API_ENDPOINT_THREE,
   OPENAI_API_ENDPOINT_TWO,
   OPENAI_API_KEY_ONE,
-  OPENAI_API_KEY_THREE,
   OPENAI_API_KEY_TWO,
 } from '../app/const';
 
@@ -38,19 +37,17 @@ export const OpenAIStream = async (
   let apiKey = '';
   switch (model.id) {
     default:
-    case 'chatbot_35_turbo_16k':
-      modelEndpoint = OPENAI_API_ENDPOINT_ONE;
-      apiKey = OPENAI_API_KEY_ONE;
+      throw new Error(`No registered model matches selection "${model.id}"`);
       break;
 
-    case 'chatbot-gpt4-turbo-128k':
+    case OpenAIModelID.GPT_5:
       modelEndpoint = OPENAI_API_ENDPOINT_TWO;
       apiKey = OPENAI_API_KEY_TWO;
       break;
 
-    case 'chatbot-gpt4o':
-      modelEndpoint = OPENAI_API_ENDPOINT_THREE;
-      apiKey = OPENAI_API_KEY_THREE;
+    case OpenAIModelID.GPT_4_1:
+      modelEndpoint = OPENAI_API_ENDPOINT_ONE;
+      apiKey = OPENAI_API_KEY_ONE;
       break;
   }
 
@@ -69,8 +66,13 @@ export const OpenAIStream = async (
         },
         ...messages,
       ],
+
       temperature: 0.7,
       top_p: 0.95,
+      // gpt5 only takes temp 1 and doesn't have top_p
+      ...(model.id === OpenAIModelID.GPT_5
+        ? { temperature: 1, top_p: undefined }
+        : {}),
       frequency_penalty: 0,
       presence_penalty: 0,
       // max_tokens: 800,
